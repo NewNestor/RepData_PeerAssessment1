@@ -7,19 +7,63 @@ output:
 
 
 ## Loading and preprocessing the data
+if(!file.exists("getdata-projectfiles-UCI HAR Dataset.zip")) {
+        temp <- tempfile()
+        download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip",temp)
+        unzip(temp)
+        unlink(temp)
+}
+data <- read.csv("activity.csv")
 
 
 
 ## What is mean total number of steps taken per day?
+data$date<- as.Date(data$date)
+stepsbyday<- tapply(data$steps, data$date, sum, na.rm=TRUE)
+library(ggplot2)
+qplot(stepsbyday, xlab="No. of Steps Taken Each Day", ylab="Total Frequency", binwidth=500)
+medianbyday<- median(stepsbyday)
+meanbyday<- mean(stepsbyday)
 
-
+medianbyday
+[1] 10395
+meanbyday
+[1]9354.23
 
 ## What is the average daily activity pattern?
+avg<- tapply(data$steps, data$interval, mean, na.rm=TRUE)
+plot(names(avg), avg, xlab="5-min interval", type="l", ylab="Average no. of steps")
+maxavg<- max(avg)
+maxinterval<- as.numeric(names(avg)[which(avg==max(avg))])
 
-
+maxavg
+[1] 206.1698
+maxinterval
+[1] 835
 
 ## Imputing missing values
+totalna<- sum(is.na(data$steps))
+totalna
+[1] 2304
 
+imputedata<- data
+imputedata$steps[which(is.na(data$steps))]<- as.vector(avg[as.character(data[which(is.na(data$steps)),3])])
+stepseachday<- tapply(imputedata$steps, imputedata$date, sum, na.rm=TRUE)
+qplot(stepseachday, xlab="No. of Steps Taken Each Day", ylab="Total Frequency", binwidth=500)
+medianEachDayImputed<- median(stepseachday)
+meanEachDayImputed<- mean(stepseachday)
+
+medianEachDayImputed
+[1] 10766.19
+meanEachDayImputed
+[1] 10766.19
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+imputedata$dayType<- ifelse(as.POSIXlt(imputedata$date)$wday %in% c(0,6), "weekends","weekdays")
+aggregateData<- aggregate(steps ~ interval + dayType, data=imputedata, mean)
+ggplot(aggregateData, aes(interval, steps)) + 
++     geom_line() + 
++     facet_grid(dayType ~ .) +
++     xlab("5-minute interval") + 
++     ylab("avarage number of steps")
